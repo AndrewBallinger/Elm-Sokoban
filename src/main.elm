@@ -1,4 +1,4 @@
-import Matrix exposing (Matrix, mapWithLocation, toList, Location, col, row, square, set, loc, get)
+import Matrix exposing (Matrix, mapWithLocation, toList, Location, col, row, square, set, loc, get, flatten)
 import Keyboard exposing (presses, arrows)
 import Char exposing (KeyCode)
 import Graphics.Element exposing (show)
@@ -32,7 +32,7 @@ origin = { x = 0, y = 0 }
 
 (|-|) : Coord -> Coord -> Coord
 (|-|) a b = { x = a.x - b.x, y = a.y - b.y }
-
+            
 renderArena : Arena -> C.Form
 renderArena arena = groupMatrix (mapWithLocation placeTile arena)
                     |> C.move (-45,-45) 
@@ -44,9 +44,10 @@ placeTile : Location -> Tile -> C.Form
 placeTile place tile = (render tile)
                          |> C.moveX (getShift (col place))
                          |> C.moveY (getShift (row place))
-                            
+
 arenaToTileCoords : Arena -> Tile -> Coord
-arenaToTileCoords a t = (List.foldl (|+|) origin) ((List.map (List.foldl (|+|) origin)) ( toList ( mapWithLocation (matchingTileToCoords t) a ) ) )
+arenaToTileCoords a t = let sumList = List.foldl (|+|) { x=0 , y=0 } in
+  sumList <| flatten <| mapWithLocation (matchingTileToCoords t) a 
                         
 matchingTileToCoords : Tile -> Location -> Tile -> Coord
 matchingTileToCoords to_match location to_be_matched =
@@ -62,7 +63,7 @@ render t =
   case t of
     Floor   -> C.square tileSize     |> C.outlined (C.solid black)
     Wall    -> C.square tileSize     |> C.filled black
-    Boulder -> C.circle tileSize     |> C.filled brown
+    Boulder -> C.circle (tileSize/2) |> C.filled brown
     Player  -> C.circle (tileSize/2) |> C.filled blue
                
 position : Signal Coord
@@ -86,7 +87,8 @@ canMove : Coord -> Arena -> Bool
 canMove next a = case  (get (loc next.y next.x) a) of
                    Just Wall -> False
                    Just Floor -> True
-                   Nothing -> True
+                   Just Boulder -> False
+                   Nothing -> False
                             
 formToElement : C.Form -> Graphics.Element.Element
 formToElement f = C.collage arenaSize arenaSize [f]
@@ -99,7 +101,8 @@ startingArena = (square gridSize (\_ -> Floor))
                 |> setTile Player {x = 0, y = 0}
                 |> setTile Wall {x = 1, y = 1} 
                 |> setTile Wall {x = 2, y = 1} 
-                |> setTile Wall {x = 3, y = 1} 
+                |> setTile Wall {x = 3, y = 1}
+                |> setTile Boulder {x = 1, y = 3}
                    
 lastA : Signal Coord
 lastA = (toXY { up = 119, down = 115, left = 97, right = 100 }) <~ presses --WASD
