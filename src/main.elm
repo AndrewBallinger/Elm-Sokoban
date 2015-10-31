@@ -14,7 +14,7 @@ import Signal as S
 type alias Arena = Matrix Tile
 type alias Coord = { x : Int, y : Int }
 type alias Directions = { up : KeyCode, down : KeyCode, left : KeyCode, right : KeyCode }
-type Tile = Floor | Wall | Boulder | Player
+type Tile = Floor | Wall | Boulder | Player | Hole
           
 tileSize : number
 tileSize = 10
@@ -65,6 +65,7 @@ render t =
     Wall    -> C.square tileSize     |> C.filled black
     Boulder -> C.circle (tileSize/2) |> C.filled brown
     Player  -> C.circle (tileSize/2) |> C.filled blue
+    Hole    -> C.circle (tileSize/3) |> C.filled black
                
 position : Signal Coord
 position = (S.foldp (|+|) origin (lastA))         
@@ -79,17 +80,40 @@ playerPosition a = arenaToTileCoords a Player
 movePlayer : Coord -> Arena -> Arena
 movePlayer c a = let current = playerPosition a in
                  let next = (current |+| c) in
-                 case canMove next a of
-                   True -> a |> setTile Floor (current) |> setTile Player next
+                 case canMove c next a of
+                   True -> a |> move current next 
                    False -> a
                             
-canMove : Coord -> Arena -> Bool
-canMove next a = case  (get (loc next.y next.x) a) of
+move : Coord -> Coord -> Arena -> Arena
+move current next a = a
+                    |> pushBoulder current next
+                    |> setTile Floor current
+                    |> setTile Player next
+
+pushBoulder : Coord -> Coord -> Arena -> Arena
+pushBoulder current next a = let dir = (next |-| current)
+                                 next_next = (next |+| dir) in
+                             case (get (loc next.y next.x) a) of
+                               Just Boulder -> case (get (loc next_next.y next_next.x) a) of
+                                 Just Hole -> setTile Floor next_next a
+                                 _         -> setTile Boulder next_next a
+                               _ -> a
+                            
+canMove : Coord -> Coord -> Arena -> Bool
+canMove direction next a = case  (get (loc next.y next.x) a) of
+                   Just Wall -> False
+                   Just Floor -> True
+                   Just Boulder -> canBoulderMove direction (next |+| direction) a
+                   _ -> False
+ 
+canBoulderMove : Coord -> Coord -> Arena -> Bool
+canBoulderMove direction next a = case  (get (loc next.y next.x) a) of
                    Just Wall -> False
                    Just Floor -> True
                    Just Boulder -> False
-                   Nothing -> False
-                            
+                   Just Hole -> True
+                   _ -> False 
+                              
 formToElement : C.Form -> Graphics.Element.Element
 formToElement f = C.collage arenaSize arenaSize [f]
        
@@ -103,6 +127,8 @@ startingArena = (square gridSize (\_ -> Floor))
                 |> setTile Wall {x = 2, y = 1} 
                 |> setTile Wall {x = 3, y = 1}
                 |> setTile Boulder {x = 1, y = 3}
+                |> setTile Boulder {x = 1, y = 2}
+                |> setTile Hole {x = 1, y = 4}
                    
 lastA : Signal Coord
 lastA = (toXY { up = 119, down = 115, left = 97, right = 100 }) <~ presses --WASD
