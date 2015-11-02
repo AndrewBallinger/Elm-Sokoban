@@ -18,6 +18,7 @@ charToTile c = case c of
                  'P' -> Player
                  'O' -> Hole
                  'E' -> Exit
+                 'B' -> Ball
                  _   -> Floor
              
 parseArena : Int -> List String -> Arena
@@ -81,6 +82,14 @@ levels = Array.fromList [
             " # ##. ##O",
             "  . .  OOO",
             "   #####  "
+          ],
+          [
+           "    OE",
+           "    ",
+           "    ",
+           " B ",
+           "   ",
+           " P "
           ]
          ]
                               
