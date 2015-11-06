@@ -5,6 +5,7 @@ import Graphics.Collage as C
 import Graphics.Element exposing (show)
 import Html exposing (div, button, text, fromElement)
 import Html.Events exposing (onClick)
+import Html.Attributes exposing (style)
 import Keyboard exposing (presses, arrows)
 import Levels exposing (getLevel)
 import Matrix exposing (Matrix, mapWithLocation, toList, Location, col, row, square, set, loc, get, flatten)
@@ -20,13 +21,16 @@ type alias Directions = { up : KeyCode, down : KeyCode, left : KeyCode, right : 
 type Update = Reset | NoOp | Move Coord
                       
 tileSize : number
-tileSize = 10
+tileSize = 40
 
 gridSize : number
 gridSize = 10
 
 arenaSize : number
 arenaSize = tileSize * gridSize
+
+prettyButton : List (String, String)
+prettyButton = [ ("color", "red"), ("margin-top", "1in")]
            
 origin : { x : Int, y : Int }
 origin = { x = 0, y = 0 }
@@ -39,7 +43,7 @@ origin = { x = 0, y = 0 }
             
 renderArena : Arena -> C.Form
 renderArena arena = groupMatrix (mapWithLocation placeTile arena.grid)
-                    |> C.move (-45,-45) 
+                    |> C.move ((-arenaSize * 0.5 + tileSize / 2),(-arenaSize * 0.5 + tileSize / 2)) 
 
 groupMatrix : Matrix C.Form -> C.Form
 groupMatrix matrix = (C.group ( List.map C.group (toList matrix)))
@@ -80,12 +84,14 @@ position = (S.foldp (|+|) origin (lastA))
 main = let mail = S.mailbox NoOp in
   (view mail.address) <~ (S.foldp updateArena startingArena (S.merge mail.signal (S.map Move lastA) ))
 
-view : S.Address Update  -> Arena -> Html.Html
+view : S.Address Update -> Arena -> Html.Html
 view addr arena =
-  div [] [
+  div [style [("padding","0.5in")]] [
   fromElement (formToElement (renderArena arena)),
-       button [onClick addr Reset] [ text "Reset" ]
+       button [onClick addr Reset, style prettyButton] [ text "Reset" ],
+       fromElement <| show arena.moveCount
        ]
+
 
 playerPosition : Arena -> Coord
 playerPosition a = arenaToTileCoords a Player
@@ -105,10 +111,14 @@ updateArena c a = case c of
                    _ -> a
                             
 move : Coord -> Coord -> Arena -> Arena
-move current next   =  pushBoulder current next
+move current next  =   incrementCount
+                    >> pushBoulder current next
                     >> setTile Floor current
                     >> setTile Player next
 
+incrementCount : Arena -> Arena
+incrementCount a = { a | moveCount <- a.moveCount + 1 }
+                       
 pushBoulder : Coord -> Coord -> Arena -> Arena
 pushBoulder current next a = let dir = (next |-| current)
                                  last_next = (lastOpen next dir a)
@@ -155,17 +165,17 @@ setTile : Tile -> Coord -> Arena -> Arena
 setTile t c a = { a | grid <- set (loc c.y c.x) t a.grid }
 
 startingArena : Arena
-startingArena = {grid = Matrix.fromList [[Player, Floor, Exit]], level = -1}
+startingArena = {grid = Matrix.fromList [[Player, Floor, Exit]], level = -1, moveCount = 0}
                              
 getNextArena : Arena -> Arena
 getNextArena a = case getLevel (a.level + 1) of
                     Just a -> a
-                    Nothing -> {grid = Matrix.fromList [[Player, Floor, Exit]], level = -1}
+                    Nothing -> {grid = Matrix.fromList [[Player, Floor, Exit]], level = -1, moveCount = 0}
 
 resetArena : Arena -> Arena
 resetArena a = case getLevel (a.level) of
                     Just a -> a
-                    Nothing -> {grid = Matrix.fromList [[Player, Floor, Exit]], level = -1}
+                    Nothing -> {grid = Matrix.fromList [[Player, Floor, Exit]], level = -1, moveCount = 0}
                                
 lastA : Signal Coord
 lastA = (toXY { up = 119, down = 115, left = 97, right = 100 }) <~ presses --WASD

@@ -22,7 +22,7 @@ charToTile c = case c of
                  _   -> Floor
              
 parseArena : Int -> List String -> Arena
-parseArena i s = { grid = Matrix.fromList ((List.map >> List.map) charToTile (List.reverse (List.map String.toList s))), level = i }
+parseArena i s = { grid = Matrix.fromList ((List.map >> List.map) charToTile (List.reverse (List.map String.toList s))), level = i, moveCount = 0 }
 
 levels : Array.Array (List String)
 levels = Array.fromList [
@@ -62,6 +62,18 @@ levels = Array.fromList [
            "P #",
            "O#",
            "E"
+          ],
+          [
+           "###   ",
+           "    # ",
+           " #    ",
+           "P B  #",
+           "###  . ",
+           "###    ",
+           "  # #",
+           "  #O",
+           "  #O",
+           "  #E"
           ],
           [
             "P      ",
