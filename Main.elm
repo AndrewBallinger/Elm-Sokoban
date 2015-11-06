@@ -24,7 +24,7 @@ tileSize : number
 tileSize = 40
 
 gridSize : number
-gridSize = 10
+gridSize = 15
 
 arenaSize : number
 arenaSize = tileSize * gridSize
