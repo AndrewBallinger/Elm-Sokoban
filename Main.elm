@@ -30,6 +30,7 @@ arenaSize = tileSize * gridSize
            
 origin : { x : Int, y : Int }
 origin = { x = 0, y = 0 }
+         
 (|+|) : Coord -> Coord -> Coord
 (|+|) a b = { x = a.x + b.x, y = a.y + b.y }
 
@@ -94,11 +95,10 @@ updateArena c a = case c of
                    Move coord ->
                      let current = playerPosition a
                          next = (current |+| coord) in
-                     if (getTile next a) == Just Exit
-                     then
-                       getNextArena a
-                     else
-                       case canMove coord next a of
+                     case (getTile next a) of
+                       Just Exit -> getNextArena a
+                       Just Hole -> resetArena a
+                       _ ->  case canMove coord next a of
                          True -> a |> move current next 
                          False -> a
                    Reset -> resetArena a
