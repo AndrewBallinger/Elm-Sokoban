@@ -18,7 +18,7 @@ import SokobanTypes exposing (Arena, Coord, Tile(..))
 (~>) = flip S.map
        
 type alias Directions = { up : KeyCode, down : KeyCode, left : KeyCode, right : KeyCode }
-type Update = Reset | NoOp | Move Coord
+type Update =  Skip | Reset | NoOp | Move Coord
                       
 tileSize : number
 tileSize = 40
@@ -82,13 +82,17 @@ position : Signal Coord
 position = (S.foldp (|+|) origin (lastA))         
           
 main = let mail = S.mailbox NoOp in
-  (view mail.address) <~ (S.foldp updateArena startingArena (S.merge mail.signal (S.map Move lastA) ))
+  (view mail.address)
+  <~ (S.foldp updateArena startingArena
+         (S.merge mail.signal
+             (S.map Move lastA) ))
 
 view : S.Address Update -> Arena -> Html.Html
 view addr arena =
   div [style [("padding","0.5in")]] [
   fromElement (formToElement (renderArena arena)),
        button [onClick addr Reset, style prettyButton] [ text "Reset" ],
+       button [onClick addr Skip] [ text "Skip (Cheatie)"],
        fromElement <| show arena.moveCount
        ]
 
@@ -102,12 +106,13 @@ updateArena c a = case c of
                      let current = playerPosition a
                          next = (current |+| coord) in
                      case (getTile next a) of
-                       Just Exit -> getNextArena a
+                       Just Exit -> nextArena a
                        Just Hole -> resetArena a
                        _ ->  case canMove coord next a of
                          True -> a |> move current next 
                          False -> a
                    Reset -> resetArena a
+                   Skip -> nextArena a
                    _ -> a
                             
 move : Coord -> Coord -> Arena -> Arena
@@ -117,7 +122,7 @@ move current next  =   incrementCount
                     >> setTile Player next
 
 incrementCount : Arena -> Arena
-incrementCount a = { a | moveCount <- a.moveCount + 1 }
+incrementCount a = { a | moveCount = a.moveCount + 1 }
                        
 pushBoulder : Coord -> Coord -> Arena -> Arena
 pushBoulder current next a = let dir = (next |-| current)
@@ -162,20 +167,20 @@ formToElement : C.Form -> Graphics.Element.Element
 formToElement f = C.collage arenaSize arenaSize [f]
        
 setTile : Tile -> Coord -> Arena -> Arena
-setTile t c a = { a | grid <- set (loc c.y c.x) t a.grid }
+setTile t c a = { a | grid = set (loc c.y c.x) t a.grid }
 
 startingArena : Arena
 startingArena = {grid = Matrix.fromList [[Player, Floor, Exit]], level = -1, moveCount = 0}
                              
-getNextArena : Arena -> Arena
-getNextArena a = case getLevel (a.level + 1) of
+nextArena : Arena -> Arena
+nextArena a = case getLevel (a.level + 1) of
                     Just a -> a
-                    Nothing -> {grid = Matrix.fromList [[Player, Floor, Exit]], level = -1, moveCount = 0}
+                    Nothing -> startingArena
 
 resetArena : Arena -> Arena
 resetArena a = case getLevel (a.level) of
                     Just a -> a
-                    Nothing -> {grid = Matrix.fromList [[Player, Floor, Exit]], level = -1, moveCount = 0}
+                    Nothing -> startingArena
                                
 lastA : Signal Coord
 lastA = (toXY { up = 119, down = 115, left = 97, right = 100 }) <~ presses --WASD
