@@ -1,11 +1,12 @@
 module Main where
+
 import Char exposing (KeyCode)
 import Color exposing (..)
 import Graphics.Collage as C
 import Graphics.Element exposing (show)
 import Html exposing (div, button, text, fromElement)
-import Html.Events exposing (onClick)
 import Html.Attributes exposing (style)
+import Html.Events exposing (onClick)
 import Keyboard exposing (presses, arrows)
 import Levels exposing (getLevel)
 import Matrix exposing (Matrix, mapWithLocation, toList, Location, col, row, square, set, loc, get, flatten)
